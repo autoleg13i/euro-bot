@@ -5,7 +5,6 @@ import json
 import logging
 import asyncio
 import aiohttp
-import nest_asyncio
 from dotenv import load_dotenv
 from telegram import Update
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
