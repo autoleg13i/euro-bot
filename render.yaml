@@ -4,4 +4,3 @@ services:
     env: python
     buildCommand: pip install -r requirements.txt
     startCommand: python euro_bot_renew.py
-    pythonVersion: 3.10.13
