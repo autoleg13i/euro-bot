@@ -1,0 +1,144 @@
+import os
+import json
+import logging
+import asyncio
+import aiohttp
+from dotenv import load_dotenv
+from bs4 import BeautifulSoup
+from telegram import Update
+from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
+
+load_dotenv()
+TOKEN = "7601628351:AAG-GL-Z83lby9NMZScU0Jx79DvFkAVxL-E"
+CHAT_ID = int(os.getenv("CHAT_ID"))
+MINFIN_TOKEN = os.getenv("MINFIN_TOKEN")
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+# === ПриватБанк ===
+PRIVAT_URL = "https://api.privatbank.ua/p24api/pubinfo?json&exchange&coursid=5"
+
+async def get_from_privat(currency: str) -> str | None:
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.get(PRIVAT_URL) as response:
+                data = await response.json()
+                for item in data:
+                    if item["ccy"].upper() == currency.upper():
+                        return f"*{currency}* (ПриватБанк):\nКупівля: `{item['buy']}`\nПродаж: `{item['sale']}`"
+    except Exception as e:
+        logger.warning(f"ПриватБанк error: {e}")
+    return None
+
+# === Мінфін ===
+async def get_from_minfin(currency: str) -> str | None:
+    try:
+        url = f"https://api.minfin.com.ua/fb/currency/list?currency={currency}&apiKey={MINFIN_TOKEN}"
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url) as response:
+                data = await response.json()
+                banks = [b for b in data if b.get("bid") not in (None, "0.00") and b.get("ask") not in (None, "0.00")]
+                for bank in banks:
+                    if bank["bank"] in ("Райффайзен Банк", "Кредобанк", "Кредит Дніпро"):
+                        return f"*{currency}* ({bank['bank']}):\nКупівля: `{bank['bid']}`\nПродаж: `{bank['ask']}`"
+    except Exception as e:
+        logger.warning(f"Мінфін error: {e}")
+    return None
+
+# === Binance ===
+async def get_from_binance(currency: str) -> str | None:
+    try:
+        symbol = f"{currency.upper()}UAH"
+        url = f"https://api.binance.com/api/v3/ticker/price?symbol={symbol}"
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url) as response:
+                if response.status == 200:
+                    data = await response.json()
+                    if "price" in data:
+                        return f"*{currency}* (Binance):\nПродаж: `{data['price']}`"
+    except Exception as e:
+        logger.warning(f"Binance error: {e}")
+    return None
+
+# === Monobank ===
+async def get_from_monobank(currency: str) -> str | None:
+    try:
+        code_map = {"USD": 840, "EUR": 978, "PLN": 985}
+        code = code_map.get(currency.upper())
+        if code is None:
+            return None
+        async with aiohttp.ClientSession() as session:
+            async with session.get("https://api.monobank.ua/bank/currency") as response:
+                data = await response.json()
+                for item in data:
+                    if item.get("currencyCodeA") == code and item.get("currencyCodeB") == 980:
+                        rate_buy = round(item["rateBuy"], 2)
+                        rate_sell = round(item["rateSell"], 2)
+                        return f"*{currency}* (Monobank):\nКупівля: `{rate_buy}`\nПродаж: `{rate_sell}`"
+    except Exception as e:
+        logger.warning(f"Mono error: {e}")
+    return None
+
+# === Основна функція отримання курсу ===
+async def get_exchange_rate(currency: str) -> str:
+    sources = [get_from_minfin, get_from_privat, get_from_binance, get_from_monobank]
+    for source in sources:
+        rate = await source(currency)
+        if rate:
+            return rate
+    return f"❌ Курс для {currency} не знайдено у доступних джерелах."
+
+# === Telegram-обробники ===
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    context.bot_data["currency"] = context.bot_data.get("currency", "EUR")
+    await update.message.reply_text(
+        "👋 Вітаю! Бот надсилає курс щопонеділка о 9:00.\nДоступні команди:\n/seteur\n/setusd\n/setpln\n/price"
+    )
+
+async def set_currency(update: Update, context: ContextTypes.DEFAULT_TYPE, value: str):
+    context.bot_data["currency"] = value
+    await update.message.reply_text(f"✅ Валюта змінена на {value}")
+
+async def set_eur(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await set_currency(update, context, "EUR")
+
+async def set_usd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await set_currency(update, context, "USD")
+
+async def set_pln(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await set_currency(update, context, "PLN")
+
+async def price(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    currency = context.bot_data.get("currency", "EUR")
+    rate = await get_exchange_rate(currency)
+    await update.message.reply_text(rate, parse_mode="Markdown")
+
+# === Щотижневе повідомлення ===
+async def send_weekly_update(app):
+    currency = app.bot_data.get("currency", "EUR")
+    rate = await get_exchange_rate(currency)
+    await app.bot.send_message(chat_id=CHAT_ID, text=f"📈 Щотижневий курс:\n{rate}", parse_mode="Markdown")
+
+# === main ===
+async def main():
+    app = ApplicationBuilder().token(TOKEN).build()
+
+    app.add_handler(CommandHandler("start", start))
+    app.add_handler(CommandHandler("seteur", set_eur))
+    app.add_handler(CommandHandler("setusd", set_usd))
+    app.add_handler(CommandHandler("setpln", set_pln))
+    app.add_handler(CommandHandler("price", price))
+
+    scheduler = AsyncIOScheduler()
+    scheduler.add_job(send_weekly_update, trigger="cron", day_of_week="mon", hour=9, minute=0, args=[app])
+    scheduler.start()
+
+    logging.info("✅ Бот запущено. Очікуємо на понеділок о 9:00...")
+    await app.run_polling()
+
+if __name__ == "__main__":
+    import nest_asyncio
+    nest_asyncio.apply()
+    asyncio.run(main())
