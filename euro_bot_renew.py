@@ -205,3 +205,26 @@ async def check_rate_spike(app):
     if previous is not None:
         diff = abs(current - previous)
         percent
+        
+        
+        
+        if __name__ == "__main__":
+    app = ApplicationBuilder().token(TOKEN).build()
+
+    # Додаємо хендлери команд
+    app.add_handler(CommandHandler("start", start))
+    app.add_handler(CommandHandler("seteur", set_eur))
+    app.add_handler(CommandHandler("setusd", set_usd))
+    app.add_handler(CommandHandler("setpln", set_pln))
+    app.add_handler(CommandHandler("price", price))
+    app.add_handler(CommandHandler("bestprice", bestprice))
+    app.add_handler(CommandHandler("allrates", allrates))
+
+    # Планувальник
+    scheduler = AsyncIOScheduler()
+    scheduler.add_job(send_weekly_update, trigger="cron", day_of_week="mon", hour=9, args=[app])
+    scheduler.add_job(check_rate_spike, trigger="cron", hour=9, args=[app])
+    scheduler.start()
+
+    logging.info("🚀 run_polling запускається — бот слухає Telegram")
+    app.run_polling()
