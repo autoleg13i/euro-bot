@@ -208,10 +208,10 @@ async def check_rate_spike(app):
         
         
         
-    if __name__ == "__main__":
-        logging.info("🚀 run_polling запускається — бот слухає Telegram")   
+if __name__ == "__main__":
+    logging.info("🚀 run_polling запускається — бот слухає Telegram")   
         
-        app = ApplicationBuilder().token(TOKEN).build()
+    app = ApplicationBuilder().token(TOKEN).build()
 
     # Додаємо хендлери команд
     app.add_handler(CommandHandler("start", start))
