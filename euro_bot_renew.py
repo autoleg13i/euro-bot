@@ -211,7 +211,9 @@ async def check_rate_spike(app):
 import asyncio
 
 if __name__ == "__main__":
-    logging.info("🚦 Запуск run_polling — бот слухає Telegram")
+    logging.info("🤖 Запуск run_polling — бот слухає Telegram")
+
+    asyncio.run(main())
 
     async def main():
         app = ApplicationBuilder().token(TOKEN).build()
