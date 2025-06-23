@@ -208,7 +208,9 @@ async def check_rate_spike(app):
         
         
         
-    if __name__ == "__main__":   
+    if __name__ == "__main__":
+        logging.info("🚀 run_polling запускається — бот слухає Telegram")   
+        
         app = ApplicationBuilder().token(TOKEN).build()
 
     # Додаємо хендлери команд
@@ -225,6 +227,5 @@ async def check_rate_spike(app):
     scheduler.add_job(send_weekly_update, trigger="cron", day_of_week="mon", hour=9, args=[app])
     scheduler.add_job(check_rate_spike, trigger="cron", hour=9, args=[app])
     scheduler.start()
-
-    logging.info("🚀 run_polling запускається — бот слухає Telegram")
+   
     app.run_polling()
