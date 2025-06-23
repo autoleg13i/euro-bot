@@ -214,7 +214,7 @@ if __name__ == "__main__":
     logging.info("🚦 Запуск run_polling — бот слухає Telegram")
 
     async def main():
-    app = ApplicationBuilder().token(TOKEN).build()
+        app = ApplicationBuilder().token(TOKEN).build()
 
         app.add_handler(CommandHandler("start", start))
         app.add_handler(CommandHandler("seteur", set_eur))
