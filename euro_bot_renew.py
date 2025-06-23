@@ -139,7 +139,7 @@ def load_last_rate(currency: str) -> float | None:
 # === Telegram-команди ===
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    context.bot_data["currency"] = context.bot_data.get("currency", "EUR")
+    print(f"📥 Отримано /start від {update.effective_user.username} ({update.effective_user.id})")
     await update.message.reply_text(
         "👋 Вітаю! Бот надсилає курс щодня о 9:00 та щопонеділка зведення.\n"
         "Команди:\n/seteur\n/setusd\n/setpln\n/price\n/bestprice\n/allrates"
@@ -235,14 +235,26 @@ async def main():
     
     
     
+async def main():
+    logger.info("🚀 Стартуємо бота...")
+    app = ApplicationBuilder().token(TOKEN).build()
+
+    app.add_handler(CommandHandler("start", start))
+    app.add_handler(CommandHandler("seteur", set_eur))
+    app.add_handler(CommandHandler("setusd", set_usd))
+    app.add_handler(CommandHandler("setpln", set_pln))
+    app.add_handler(CommandHandler("price", price))
+    app.add_handler(CommandHandler("bestprice", bestprice))
+    app.add_handler(CommandHandler("allrates", allrates))
+
+    scheduler = AsyncIOScheduler()
+    scheduler.add_job(send_weekly_update, trigger="cron", day_of_week="mon", hour=9, minute=0, args=[app])
+    scheduler.add_job(check_rate_spike, trigger="cron", hour=9, minute=0, args=[app])
+    scheduler.start()
+
+    logger.info("✅ Бот запущено.")
+    await app.run_polling()  # <-- Ось тут
+
 if __name__ == "__main__":
     import asyncio
-
-    try:
-        asyncio.run(main())
-    except RuntimeError as e:
-        if "already running" in str(e):
-            # Якщо подієва петля вже активна (наприклад, Jupyter)
-            loop = asyncio.get_running_loop()
-            task = loop.create_task(main())
-            loop.run_until_complete(task)
+    asyncio.run(main())
