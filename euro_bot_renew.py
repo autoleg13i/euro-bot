@@ -1,9 +1,6 @@
-# euro_bot_renew.py
-
 import os
 import json
 import logging
-import asyncio
 import aiohttp
 from dotenv import load_dotenv
 from telegram import Update
@@ -139,7 +136,6 @@ def load_last_rate(currency: str) -> float | None:
 # === Telegram-команди ===
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    print(f"📥 Отримано /start від {update.effective_user.username} ({update.effective_user.id})")
     await update.message.reply_text(
         "👋 Вітаю! Бот надсилає курс щодня о 9:00 та щопонеділка зведення.\n"
         "Команди:\n/seteur\n/setusd\n/setpln\n/price\n/bestprice\n/allrates"
@@ -209,58 +205,4 @@ async def check_rate_spike(app):
         if percent > 1.5:
             trend = "🔺 зросла" if current > previous else "🔻 знизилась"
             text = f"⚠️ *Курс {currency} {trend} на {percent:.2f}%!*\nБуло: `{previous}` → Стало: `{current}`"
-            await app.bot.send_message(chat_id=CHAT_ID, text=text, parse_mode="Markdown")
-    save_last_rate(currency, current)
-
-# === Основний
-async def main():
-    logger.info("🚀 Стартуємо бота...")
-    app = ApplicationBuilder().token(TOKEN).build()
-
-    app.add_handler(CommandHandler("start", start))
-    app.add_handler(CommandHandler("seteur", set_eur))
-    app.add_handler(CommandHandler("setusd", set_usd))
-    app.add_handler(CommandHandler("setpln", set_pln))
-    app.add_handler(CommandHandler("price", price))
-    app.add_handler(CommandHandler("bestprice", bestprice))
-    app.add_handler(CommandHandler("allrates", allrates))
-
-    scheduler = AsyncIOScheduler()
-    scheduler.add_job(send_weekly_update, trigger="cron", day_of_week="mon", hour=9, minute=0, args=[app])
-    scheduler.add_job(check_rate_spike, trigger="cron", hour=9, minute=0, args=[app])
-    scheduler.start()
-
-    logger.info("✅ Бот запущено.")
-    app.run_polling()
-    
-    
-    
-from telegram.ext import ApplicationBuilder, CommandHandler
-from apscheduler.schedulers.asyncio import AsyncIOScheduler
-import logging
-import os
-
-# Логування
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
-
-# ENV
-TOKEN = os.getenv("TELEGRAM_TOKEN")
-CHAT_ID = int(os.getenv("CHAT_ID"))
-
-# Ініціалізація
-app = ApplicationBuilder().token(TOKEN).build()
-
-# Хендлери
-app.add_handler(CommandHandler("start", start))
-# додай інші...
-
-# Планувальник
-scheduler = AsyncIOScheduler()
-scheduler.add_job(send_weekly_update, trigger="cron", day_of_week="mon", hour=9, minute=0, args=[app])
-scheduler.add_job(check_rate_spike, trigger="cron", hour=9, minute=0, args=[app])
-scheduler.start()
-
-if __name__ == "__main__":
-    logger.info("🚀 Стартуємо бота…")
-    app.run_polling()  # <--- БЕЗ await, БЕЗ asyncio.run()
+            await app
