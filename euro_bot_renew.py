@@ -235,4 +235,4 @@ if __name__ == "__main__":
 
         await app.run_polling()
 
-    asyncio.run(main())
+    asyncio.run(main())  # <-- це зайве
