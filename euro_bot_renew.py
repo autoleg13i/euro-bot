@@ -11,7 +11,7 @@ from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 load_dotenv()
-TOKEN = "7601628351:AAG-GL-Z83lby9NMZScU0Jx79DvFkAVxL-E"
+TOKEN = os.getenv("TELEGRAM_TOKEN")
 CHAT_ID = int(os.getenv("CHAT_ID"))
 MINFIN_TOKEN = os.getenv("MINFIN_TOKEN")
 LAST_RATE_FILE = "last_rate.json"
@@ -231,30 +231,36 @@ async def main():
     scheduler.start()
 
     logger.info("✅ Бот запущено.")
-    await app.run_polling()
+    app.run_polling()
     
     
     
-async def main():
-    logger.info("🚀 Стартуємо бота...")
-    app = ApplicationBuilder().token(TOKEN).build()
+from telegram.ext import ApplicationBuilder, CommandHandler
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
+import logging
+import os
 
-    app.add_handler(CommandHandler("start", start))
-    app.add_handler(CommandHandler("seteur", set_eur))
-    app.add_handler(CommandHandler("setusd", set_usd))
-    app.add_handler(CommandHandler("setpln", set_pln))
-    app.add_handler(CommandHandler("price", price))
-    app.add_handler(CommandHandler("bestprice", bestprice))
-    app.add_handler(CommandHandler("allrates", allrates))
+# Логування
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
-    scheduler = AsyncIOScheduler()
-    scheduler.add_job(send_weekly_update, trigger="cron", day_of_week="mon", hour=9, minute=0, args=[app])
-    scheduler.add_job(check_rate_spike, trigger="cron", hour=9, minute=0, args=[app])
-    scheduler.start()
+# ENV
+TOKEN = os.getenv("TELEGRAM_TOKEN")
+CHAT_ID = int(os.getenv("CHAT_ID"))
 
-    logger.info("✅ Бот запущено.")
-    await app.run_polling()  # <-- Ось тут
+# Ініціалізація
+app = ApplicationBuilder().token(TOKEN).build()
+
+# Хендлери
+app.add_handler(CommandHandler("start", start))
+# додай інші...
+
+# Планувальник
+scheduler = AsyncIOScheduler()
+scheduler.add_job(send_weekly_update, trigger="cron", day_of_week="mon", hour=9, minute=0, args=[app])
+scheduler.add_job(check_rate_spike, trigger="cron", hour=9, minute=0, args=[app])
+scheduler.start()
 
 if __name__ == "__main__":
-    import asyncio
-    asyncio.run(main())
+    logger.info("🚀 Стартуємо бота…")
+    app.run_polling()  # <--- БЕЗ await, БЕЗ asyncio.run()
