@@ -208,8 +208,8 @@ async def check_rate_spike(app):
         
         
         
-        if __name__ == "__main__":
-    app = ApplicationBuilder().token(TOKEN).build()
+    if __name__ == "__main__":   
+        app = ApplicationBuilder().token(TOKEN).build()
 
     # Додаємо хендлери команд
     app.add_handler(CommandHandler("start", start))
