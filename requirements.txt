@@ -1,4 +1,4 @@
-python-telegram-bot==20.7
-aiohttp
-apscheduler
-python-dotenv
+streamlit @ https://files.pythonhosted.org/packages/py3/s/streamlit/1.35.0/streamlit-1.35.0-py3-none-any.whl
+streamlit-autorefresh @ git+https://github.com/streamlit/streamlit-autorefresh.git
+requests
+pandas
