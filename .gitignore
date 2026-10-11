@@ -3,3 +3,6 @@ __pycache__/
 *.log
 node_modules/
 *.sqlite3
+# службові файли macOS на зовнішньому диску
+._*
+.DS_Store
